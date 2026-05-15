@@ -105,7 +105,7 @@ The layout hierarchy was deliberately chosen top-to-bottom:
 
 ### Dashboard Screen Wireframe
 
-![Game Screen Wireframe](https://github.com/kriti613/typingdna_UI.png)
+![Game Screen Wireframe](https://github.com/kriti613/Typing-DNA/blob/main/typingdna_UI.png)
 
 ---
 
@@ -198,7 +198,7 @@ The DNA strand is the centrepiece — and what makes this project unlike anythin
 | 6 | Bridge rungs coloured by individual key speed |
 | 7 | Every strand is mathematically unique to that session |
 
-![DNA Strand Example](https://github.com/kriti613/typingdnaafterround1.png)
+![DNA Strand Example](https://github.com/kriti613/Typing-DNA/blob/main/typingdnaafterround1.png)
 
 ### Typing Archetypes 🏷️
 
@@ -218,7 +218,7 @@ The DNA strand is the centrepiece — and what makes this project unlike anythin
 
 After completing rounds, click **View Dashboard** to access the full session analytics — modelled on a Power BI report layout.
 
-![Dashboard Full View](https://github.com/kriti613/typingDNafullanalysis.png)
+![Dashboard Full View](https://github.com/kriti613/Typing-DNA/blob/main/typingDNafullanalysis.png)
 ### KPI Cards
 
 | KPI | Calculation |
