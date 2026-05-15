@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Typing DNA</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0A0A0F;
+      color: #E2E2FF;
+      min-height: 100vh;
+    }
+
+    #app { max-width: 960px; margin: 0 auto; padding: 0 20px 40px; }
+
+    .screen { display: none; flex-direction: column; gap: 14px; padding-top: 24px; }
+    .screen.active { display: flex; }
+
+    /* ── HEADER ── */
+    .game-header { display: flex; align-items: baseline; gap: 10px; }
+    .game-title { font-size: 28px; font-weight: bold; color: #fff; letter-spacing: -0.5px; }
+    .game-title span { color: #A78BFA; }
+    .game-sub { font-size: 12px; color: #444466; }
+
+    /* ── DIFFICULTY ── */
+    .diff-row { display: flex; gap: 8px; }
+    .diff-btn {
+      padding: 6px 16px; border-radius: 6px;
+      border: 1px solid #2A2A4A; background: #111122;
+      color: #666688; font-size: 12px; font-family: 'Courier New', monospace;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .diff-btn:hover { border-color: #4A4A8A; color: #AAAACC; }
+    .diff-btn.active { background: #534AB7; color: #EEEDFE; border-color: #534AB7; }
+
+    /* ── SENTENCE BOX ── */
+    .sentence-box {
+      background: #111122; border: 1px solid #2A2A4A;
+      border-radius: 10px; padding: 20px 18px;
+      min-height: 72px; font-size: 16px; line-height: 1.9;
+      letter-spacing: 0.03em; word-break: break-word;
+    }
+    .char { display: inline; }
+    .char.correct { color: #34D399; }
+    .char.wrong   { color: #F87171; background: rgba(248,113,113,0.12); border-radius: 2px; }
+    .char.pending { color: #333355; }
+    .char.active  { color: #AAAACC; border-bottom: 2px solid #A78BFA; }
+
+    /* ── INPUT ── */
+    #typer {
+      width: 100%; padding: 13px 16px;
+      font-size: 16px; font-family: 'Courier New', monospace;
+      background: #0D0D1A; border: 1px solid #2A2A4A;
+      border-radius: 8px; color: #E2E2FF;
+      outline: none; transition: border-color 0.2s;
+    }
+    #typer:focus { border-color: #534AB7; }
+    #typer:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── LIVE STATS ── */
+    .live-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .stat-card {
+      background: #111122; border: 1px solid #1A1A3A;
+      border-radius: 8px; padding: 14px; text-align: center;
+    }
+    .stat-label { font-size: 10px; color: #444466; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+    .stat-val { font-size: 24px; font-weight: bold; color: #fff; }
+
+    /* ── DNA CANVAS ── */
+    .dna-wrap { background: #080810; border: 1px solid #1A1A3A; border-radius: 8px; padding: 10px 12px; }
+    .dna-label { font-size: 10px; color: #333355; letter-spacing: 0.1em; margin-bottom: 6px; }
+    #dna-canvas { width: 100%; display: block; border-radius: 4px; }
+
+    /* ── ARCHETYPE ── */
+    .archetype-bar {
+      background: #111122; border: 1px solid #1A1A3A;
+      border-radius: 10px; padding: 14px 18px;
+      display: flex; align-items: center; gap: 14px; min-height: 58px;
+    }
+    .arch-icon { font-size: 26px; flex-shrink: 0; }
+    .arch-name { font-size: 15px; font-weight: bold; color: #fff; }
+    .arch-desc { font-size: 12px; color: #666688; margin-top: 2px; }
+
+    /* ── BUTTONS ── */
+    .btn-row { display: flex; gap: 10px; }
+    .btn-primary {
+      flex: 1; padding: 12px; border-radius: 8px;
+      border: none; background: #534AB7; color: #EEEDFE;
+      font-size: 14px; font-family: 'Courier New', monospace;
+      font-weight: bold; cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-sec {
+      padding: 12px 20px; border-radius: 8px;
+      border: 1px solid #2A2A4A; background: #111122;
+      color: #666688; font-size: 14px; font-family: 'Courier New', monospace;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-sec:hover { border-color: #4A4A8A; color: #AAAACC; }
+    .btn-sec:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── DASHBOARD ── */
+    #dash-screen { background: #0A0A0F; }
+
+    .dash-header {
+      display: flex; align-items: center;
+      justify-content: space-between; padding-bottom: 4px;
+      border-bottom: 1px solid #1A1A3A;
+    }
+    .dash-title { font-size: 20px; font-weight: bold; color: #fff; }
+    .dash-title span { color: #A78BFA; }
+    .dash-sub { font-size: 12px; color: #444466; margin-top: 2px; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .kpi {
+      background: #111122; border: 1px solid #1A1A3A;
+      border-radius: 10px; padding: 16px;
+    }
+    .kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .kpi-lbl { font-size: 11px; color: #444466; text-transform: uppercase; letter-spacing: 0.08em; }
+    .kpi-icon { font-size: 18px; }
+    .kpi-num { font-size: 30px; font-weight: bold; color: #fff; }
+    .kpi-trend { font-size: 11px; margin-top: 6px; }
+    .trend-up { color: #34D399; }
+    .trend-dn { color: #F87171; }
+
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .chart-card {
+      background: #111122; border: 1px solid #1A1A3A;
+      border-radius: 10px; padding: 16px;
+    }
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-title {
+      font-size: 11px; color: #444466;
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;
+    }
+
+    .progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .prog-label { font-size: 12px; color: #666688; width: 80px; flex-shrink: 0; }
+    .prog-bar-wrap { flex: 1; height: 7px; background: #1A1A3A; border-radius: 4px; overflow: hidden; }
+    .prog-bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+    .prog-val { font-size: 12px; color: #AAAACC; width: 40px; text-align: right; flex-shrink: 0; }
+
+    .insight-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .insight-pill {
+      background: #0D0D1A; border: 1px solid #1A1A3A;
+      border-radius: 8px; padding: 12px 14px;
+    }
+    .insight-lbl { font-size: 11px; color: #444466; }
+    .insight-val { font-size: 16px; font-weight: bold; color: #fff; margin-top: 4px; }
+
+    .legend-row { display: flex; gap: 16px; margin-bottom: 8px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #666688; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    .round-divider { border: none; border-top: 1px solid #1A1A3A; margin: 12px 0; }
+    .round-header { font-size: 11px; color: #555577; margin-bottom: 8px; }
+
+    @media (max-width: 600px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .charts-grid { grid-template-columns: 1fr; }
+      .charts-grid .chart-card.full { grid-column: 1; }
+      .live-stats { grid-template-columns: repeat(2, 1fr); }
+      .insight-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════════════════════════════════════════
+       SCREEN 1: GAME
+  ══════════════════════════════════════════ -->
+  <div id="game-screen" class="screen active">
+
+    <div class="game-header">
+      <div class="game-title">TYPING<span> DNA</span></div>
+      <div class="game-sub">discover your keystroke personality</div>
+    </div>
+
+    <div class="diff-row">
+      <button class="diff-btn" onclick="setDiff('Easy', this)">Easy</button>
+      <button class="diff-btn active" onclick="setDiff('Medium', this)">Medium</button>
+      <button class="diff-btn" onclick="setDiff('Hard', this)">Hard</button>
+    </div>
+
+    <div class="sentence-box" id="sent-box">
+      <span style="color:#222244;">Press Start to begin your typing session…</span>
+    </div>
+
+    <input type="text" id="typer" placeholder="start typing here…"
+           disabled autocomplete="off" spellcheck="false" />
+
+    <div class="live-stats">
+      <div class="stat-card">
+        <div class="stat-label">WPM</div>
+        <div class="stat-val" id="s-wpm">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Accuracy</div>
+        <div class="stat-val" id="s-acc">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Time</div>
+        <div class="stat-val" id="s-time">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Rhythm</div>
+        <div class="stat-val" id="s-rhythm">—</div>
+      </div>
+    </div>
+
+    <div class="dna-wrap">
+      <div class="dna-label">YOUR TYPING DNA STRAND</div>
+      <canvas id="dna-canvas" height="70"></canvas>
+    </div>
+
+    <div class="archetype-bar" id="arch-bar">
+      <span class="arch-icon">⌨️</span>
+      <div>
+        <div class="arch-name">Complete a round to reveal your typing archetype</div>
+        <div class="arch-desc">Your keystroke timing generates a unique DNA strand</div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" id="start-btn" onclick="startGame()">▶ Start</button>
+      <button class="btn-sec" onclick="resetGame()">↺ Reset</button>
+      <button class="btn-sec" id="dash-btn" onclick="showDash()" disabled>📊 View Dashboard →</button>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       SCREEN 2: DASHBOARD
+  ══════════════════════════════════════════ -->
+  <div id="dash-screen" class="screen">
+
+    <div class="dash-header">
+      <div>
+        <div class="dash-title">TYPING <span>DNA</span> — Session Dashboard</div>
+        <div class="dash-sub" id="dash-sub">Loading analytics…</div>
+      </div>
+      <button class="btn-sec" onclick="showGame()">← Back to game</button>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-top">
+          <span class="kpi-lbl">Best WPM</span>
+          <span class="kpi-icon">⚡</span>
+        </div>
+        <div class="kpi-num" id="k-best-wpm">—</div>
+        <div class="kpi-trend" id="k-best-wpm-t"></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-top">
+          <span class="kpi-lbl">Avg Accuracy</span>
+          <span class="kpi-icon">🎯</span>
+        </div>
+        <div class="kpi-num" id="k-avg-acc">—</div>
+        <div class="kpi-trend" id="k-avg-acc-t"></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-top">
+          <span class="kpi-lbl">Avg Rhythm</span>
+          <span class="kpi-icon">🎵</span>
+        </div>
+        <div class="kpi-num" id="k-rhythm">—</div>
+        <div class="kpi-trend" id="k-rhythm-t"></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-top">
+          <span class="kpi-lbl">Rounds Played</span>
+          <span class="kpi-icon">🔁</span>
+        </div>
+        <div class="kpi-num" id="k-rounds">—</div>
+        <div class="kpi-trend" id="k-rounds-t"></div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+
+      <!-- Line chart: WPM trend -->
+      <div class="chart-card full">
+        <div class="chart-title">WPM &amp; Accuracy over rounds</div>
+        <div class="legend-row">
+          <div class="legend-item"><div class="legend-dot" style="background:#A78BFA;"></div>WPM</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#34D399;border-radius:50%;"></div>Accuracy %</div>
+        </div>
+        <div style="position:relative;width:100%;height:200px;">
+          <canvas id="wpm-chart" role="img" aria-label="Line chart showing WPM and accuracy per round">WPM per round.</canvas>
+        </div>
+      </div>
+
+      <!-- Donut: Accuracy distribution -->
+      <div class="chart-card">
+        <div class="chart-title">Accuracy distribution</div>
+        <div class="legend-row">
+          <div class="legend-item"><div class="legend-dot" style="background:#34D399;"></div>≥95%</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#60A5FA;"></div>85–94%</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#F87171;"></div>&lt;85%</div>
+        </div>
+        <div style="position:relative;width:100%;height:170px;">
+          <canvas id="acc-chart" role="img" aria-label="Donut chart showing accuracy quality distribution">Accuracy distribution.</canvas>
+        </div>
+      </div>
+
+      <!-- Scatter: Speed vs Accuracy -->
+      <div class="chart-card">
+        <div class="chart-title">Speed vs accuracy</div>
+        <div style="position:relative;width:100%;height:170px;">
+          <canvas id="scatter-chart" role="img" aria-label="Scatter plot of WPM vs accuracy per round">Speed vs accuracy per round.</canvas>
+        </div>
+      </div>
+
+      <!-- Per-round breakdown -->
+      <div class="chart-card full">
+        <div class="chart-title">Per-round breakdown</div>
+        <div id="prog-rows"></div>
+      </div>
+
+      <!-- Insights -->
+      <div class="chart-card full">
+        <div class="chart-title">Key insights</div>
+        <div class="insight-grid" id="insights"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Chart.js from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   DATA
+══════════════════════════════════════════════════════ */
+const SENTENCES = {
+  Easy: [
+    "the quick brown fox jumps over the lazy dog",
+    "she sells sea shells by the sea shore today",
+    "a stitch in time saves nine every single time",
+    "all that glitters is not gold in the end",
+  ],
+  Medium: [
+    "programming is the art of telling a computer what you want it to do",
+    "the only way to learn a new language is to write code every single day",
+    "simplicity is the soul of efficiency in any well designed software system",
+    "any fool can write code that a computer understands but few can write clean code",
+  ],
+  Hard: [
+    "sphinx of black quartz judge my vow while exquisitely crafted bronze fixtures gleam",
+    "how vexingly quick daft zebras jump across the frozen archipelago at midnight",
+    "the Byzantine emperor gazed at sixty quartz prisms flickering with vivid kaleidoscopic light",
+    "five quacking zephyrs jolt my wax bed while the crazy dogs jump over the fox",
+  ],
+};
+
+const ARCHETYPES = [
+  { test: (w,a,r) => w>80 && a>95, icon:"⚡", name:"The Thunderbolt",    desc:"Blazing speed with laser precision. You are elite." },
+  { test: (w,a,r) => w>60 && a>90, icon:"🎯", name:"The Marksman",        desc:"Balanced and deadly accurate. Reliable under pressure." },
+  { test: (w,a,r) => w>50 && a<85, icon:"🔥", name:"The Berserker",       desc:"Raw power, chaotic energy. Speed over caution." },
+  { test: (w,a,r) => w<40 && a>95, icon:"🧙", name:"The Perfectionist",   desc:"Slow but immaculate. Every keystroke is intentional." },
+  { test: (w,a,r) => r>85,         icon:"🤖", name:"The Metronome",       desc:"Machine-like rhythm. Steady and utterly dependable." },
+  { test: (w,a,r) => w>45,         icon:"🌊", name:"The Flow Rider",      desc:"Smooth and steady. You find your groove effortlessly." },
+  { test: () => true,              icon:"🌱", name:"The Apprentice",      desc:"Still growing. Potential is massive — keep typing!" },
+];
+
+/* ══════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════ */
+let diff            = "Medium";
+let sentence        = "";
+let startTime       = null;
+let keyTimes        = [];
+let mistakes        = 0;
+let totalKeystrokes = 0;  // every key press including backspace counts
+let active          = false;
+let results         = [];
+let liveTimer       = null;
+let wpmChart, accChart, scatterChart;
+
+/* ══════════════════════════════════════════════════════
+   DIFFICULTY
+══════════════════════════════════════════════════════ */
+function setDiff(d, el) {
+  diff = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+/* ══════════════════════════════════════════════════════
+   GAME CONTROLS
+══════════════════════════════════════════════════════ */
+function startGame() {
+  const pool = SENTENCES[diff];
+  sentence  = pool[Math.floor(Math.random() * pool.length)];
+  keyTimes        = [];
+  mistakes        = 0;
+  totalKeystrokes = 0;
+  startTime       = null;
+  active          = true;
+
+  const inp = document.getElementById('typer');
+  inp.value = '';
+  inp.disabled = false;
+  inp.focus();
+
+  document.getElementById('start-btn').disabled = true;
+  document.getElementById('start-btn').textContent = '⏱ Typing…';
+
+  renderSentence('');
+  clearInterval(liveTimer);
+  liveTimer = setInterval(updateLive, 150);
+}
+
+function resetGame() {
+  active = false;
+  clearInterval(liveTimer);
+  startTime = null;
+
+  const inp = document.getElementById('typer');
+  inp.value = '';
+  inp.disabled = true;
+
+  document.getElementById('start-btn').disabled = false;
+  document.getElementById('start-btn').textContent = '▶ Start';
+  document.getElementById('sent-box').innerHTML = '<span style="color:#222244;">Press Start to begin your typing session…</span>';
+
+  ['s-wpm','s-acc','s-time','s-rhythm'].forEach(id => {
+    document.getElementById(id).textContent = '—';
+  });
+
+  drawEmptyDNA();
+
+  document.getElementById('arch-bar').innerHTML = `
+    <span class="arch-icon">⌨️</span>
+    <div>
+      <div class="arch-name">Complete a round to reveal your typing archetype</div>
+      <div class="arch-desc">Your keystroke timing generates a unique DNA strand</div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   SENTENCE RENDER
+══════════════════════════════════════════════════════ */
+function renderSentence(typed) {
+  const box = document.getElementById('sent-box');
+  box.innerHTML = '';
+
+  for (let i = 0; i < sentence.length; i++) {
+    const sp = document.createElement('span');
+    sp.className = 'char';
+
+    const ch = sentence[i];
+    sp.textContent = ch === ' ' ? '\u00A0' : ch;
+
+    if (i < typed.length) {
+      sp.classList.add(typed[i] === ch ? 'correct' : 'wrong');
+    } else if (i === typed.length) {
+      sp.classList.add('active');
+    } else {
+      sp.classList.add('pending');
+    }
+    box.appendChild(sp);
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   TYPING EVENT LISTENERS
+══════════════════════════════════════════════════════ */
+document.getElementById('typer').addEventListener('keydown', e => {
+  if (!active) return;
+  if (!startTime && e.key.length === 1) startTime = performance.now();
+  if (e.key.length === 1 || e.key === 'Backspace') {
+    keyTimes.push({ key: e.key, t: performance.now() });
+    totalKeystrokes++; // every keystroke (including backspace) penalises accuracy
+  }
+});
+
+document.getElementById('typer').addEventListener('input', e => {
+  if (!active) return;
+  const typed = e.target.value;
+  renderSentence(typed);
+
+  mistakes = 0;
+  for (let i = 0; i < typed.length; i++) {
+    if (typed[i] !== sentence[i]) mistakes++;
+  }
+
+  if (typed === sentence) finishRound();
+});
+
+/* ══════════════════════════════════════════════════════
+   LIVE STATS UPDATE
+══════════════════════════════════════════════════════ */
+function updateLive() {
+  if (!startTime) return;
+  const elapsed = (performance.now() - startTime) / 1000;
+  const typed   = document.getElementById('typer').value;
+  const words   = typed.trim().split(/\s+/).filter(Boolean).length;
+  const wpm     = elapsed > 0.5 ? Math.round((words / elapsed) * 60) : 0;
+
+  // accuracy = correct keystrokes / total keystrokes pressed (backspace counts against you)
+  const correctKeys = Math.max(0, totalKeystrokes - mistakes - (totalKeystrokes - typed.length - mistakes));
+  const acc = totalKeystrokes > 0
+    ? Math.max(0, Math.round((typed.length - mistakes) / totalKeystrokes * 100))
+    : 100;
+
+  document.getElementById('s-wpm').textContent  = wpm || '—';
+  document.getElementById('s-acc').textContent  = acc + '%';
+  document.getElementById('s-time').textContent = elapsed.toFixed(1) + 's';
+}
+
+/* ══════════════════════════════════════════════════════
+   RHYTHM CALCULATION
+══════════════════════════════════════════════════════ */
+function calcRhythm(times) {
+  if (times.length < 4) return 50;
+  const intervals = [];
+  for (let i = 1; i < times.length; i++) {
+    const d = times[i].t - times[i-1].t;
+    if (d < 1500) intervals.push(d);
+  }
+  if (!intervals.length) return 50;
+  const mean     = intervals.reduce((a,b) => a+b, 0) / intervals.length;
+  const variance = intervals.reduce((a,b) => a + (b - mean) ** 2, 0) / intervals.length;
+  const cv       = Math.sqrt(variance) / mean;
+  return Math.max(0, Math.min(100, Math.round((1 - cv) * 100)));
+}
+
+/* ══════════════════════════════════════════════════════
+   FINISH ROUND
+══════════════════════════════════════════════════════ */
+function finishRound() {
+  active = false;
+  clearInterval(liveTimer);
+
+  const elapsed  = (performance.now() - startTime) / 1000;
+  const words    = sentence.split(' ').length;
+  const wpm      = Math.round((words / elapsed) * 60);
+  // correct keystrokes = sentence length (all correct at finish), penalty = extra keystrokes
+  const accuracy = totalKeystrokes > 0
+    ? Math.max(0, Math.round(sentence.length / totalKeystrokes * 100))
+    : 100;
+  const rhythm   = calcRhythm(keyTimes);
+
+  results.push({ wpm, accuracy, rhythm, time: Math.round(elapsed * 10) / 10, diff });
+
+  // Update stat display
+  document.getElementById('s-wpm').textContent    = wpm;
+  document.getElementById('s-acc').textContent    = accuracy + '%';
+  document.getElementById('s-time').textContent   = elapsed.toFixed(1) + 's';
+  document.getElementById('s-rhythm').textContent = rhythm + '%';
+
+  // Archetype reveal
+  const arch = ARCHETYPES.find(a => a.test(wpm, accuracy, rhythm));
+  document.getElementById('arch-bar').innerHTML = `
+    <span class="arch-icon">${arch.icon}</span>
+    <div>
+      <div class="arch-name">${arch.name}</div>
+      <div class="arch-desc">${arch.desc}</div>
+    </div>`;
+
+  // Draw DNA
+  drawDNA();
+
+  document.getElementById('start-btn').disabled    = false;
+  document.getElementById('start-btn').textContent = '▶ Play Again';
+  document.getElementById('typer').disabled        = true;
+  document.getElementById('dash-btn').disabled     = false;
+}
+
+/* ══════════════════════════════════════════════════════
+   DNA CANVAS — EMPTY STATE
+══════════════════════════════════════════════════════ */
+function drawEmptyDNA() {
+  const c   = document.getElementById('dna-canvas');
+  const ctx = c.getContext('2d');
+  c.width   = c.offsetWidth || 860;
+
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  for (let x = 0; x < c.width; x += 14) {
+    const phase = x / 32;
+    const y1    = 18 + 14 * Math.sin(phase);
+    const y2    = 52 - 14 * Math.sin(phase);
+
+    ctx.fillStyle = '#1A1A3A';
+    ctx.beginPath(); ctx.arc(x, y1, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y2, 2.5, 0, Math.PI * 2); ctx.fill();
+
+    if (x % 42 === 0) {
+      ctx.strokeStyle = '#111130';
+      ctx.lineWidth   = 1;
+      ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, y2); ctx.stroke();
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   DNA CANVAS — LIVE STRAND
+══════════════════════════════════════════════════════ */
+function drawDNA() {
+  const c   = document.getElementById('dna-canvas');
+  const ctx = c.getContext('2d');
+  c.width   = c.offsetWidth || 860;
+  const W   = c.width;
+
+  ctx.clearRect(0, 0, W, 70);
+
+  // Collect inter-key intervals
+  const intervals = [];
+  for (let i = 1; i < keyTimes.length; i++) {
+    const d = keyTimes[i].t - keyTimes[i-1].t;
+    if (d < 1500) intervals.push(d);
+  }
+
+  const maxI = intervals.length ? Math.max(...intervals) : 300;
+  const minI = intervals.length ? Math.min(...intervals) : 50;
+
+  const r   = results[results.length - 1];
+  const hue = 220 + (r.wpm / 150) * 120; // blue → green based on speed
+
+  // Build strand points
+  const ptsTop = [], ptsBot = [];
+  const STEPS  = 90;
+
+  for (let s = 0; s < STEPS; s++) {
+    const x    = (s / STEPS) * W;
+    const idx  = Math.floor((s / STEPS) * Math.max(intervals.length - 1, 1));
+    const iv   = intervals[idx] || 150;
+    const norm = (maxI > minI) ? (iv - minI) / (maxI - minI) : 0.5;
+    const amp  = 8 + norm * 20;
+    const ph   = (s / STEPS) * Math.PI * 6;
+
+    ptsTop.push([x, 35 - amp * Math.sin(ph)]);
+    ptsBot.push([x, 35 + amp * Math.sin(ph)]);
+
+    // Bridge rungs every ~8 steps
+    if (s % 8 === 0) {
+      const h   = (1 - norm) * 140 + 180;
+      const col = `hsl(${h},70%,58%)`;
+      const yT  = ptsTop[ptsTop.length - 1][1];
+      const yB  = ptsBot[ptsBot.length - 1][1];
+
+      ctx.strokeStyle = col;
+      ctx.lineWidth   = 1;
+      ctx.beginPath(); ctx.moveTo(x, yT); ctx.lineTo(x, yB); ctx.stroke();
+
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(x, yT, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, yB, 3, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // Draw smooth strands
+  const drawCurve = (pts, col) => {
+    ctx.strokeStyle = col;
+    ctx.lineWidth   = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i][0] + pts[i+1][0]) / 2;
+      const my = (pts[i][1] + pts[i+1][1]) / 2;
+      ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+    }
+    ctx.stroke();
+  };
+
+  drawCurve(ptsTop, `hsl(${hue}, 65%, 58%)`);
+  drawCurve(ptsBot, `hsl(${hue}, 65%, 58%)`);
+
+  // WPM + acc labels
+  ctx.fillStyle  = '#444466';
+  ctx.font       = '10px Courier New';
+  ctx.textAlign  = 'left';
+  ctx.fillText(`WPM ${r.wpm}`, 8, 12);
+  ctx.textAlign  = 'right';
+  ctx.fillText(`ACC ${r.accuracy}%`, W - 8, 12);
+}
+
+/* ══════════════════════════════════════════════════════
+   SCREEN NAVIGATION
+══════════════════════════════════════════════════════ */
+function showDash() {
+  document.getElementById('game-screen').classList.remove('active');
+  document.getElementById('dash-screen').classList.add('active');
+  renderDash();
+}
+
+function showGame() {
+  document.getElementById('dash-screen').classList.remove('active');
+  document.getElementById('game-screen').classList.add('active');
+}
+
+/* ══════════════════════════════════════════════════════
+   DASHBOARD RENDER
+══════════════════════════════════════════════════════ */
+function renderDash() {
+  if (!results.length) return;
+
+  const n        = results.length;
+  const bestWPM  = Math.max(...results.map(r => r.wpm));
+  const avgAcc   = Math.round(results.reduce((a,r) => a + r.accuracy, 0) / n);
+  const avgRhythm= Math.round(results.reduce((a,r) => a + r.rhythm, 0) / n);
+  const avgTime  = (results.reduce((a,r) => a + r.time, 0) / n).toFixed(1);
+  const avgWPM   = Math.round(results.reduce((a,r) => a + r.wpm, 0) / n);
+
+  document.getElementById('dash-sub').textContent =
+    `${n} round${n > 1 ? 's' : ''} played · avg time ${avgTime}s · avg ${avgWPM} WPM`;
+
+  document.getElementById('k-best-wpm').textContent = bestWPM;
+  document.getElementById('k-avg-acc').textContent  = avgAcc + '%';
+  document.getElementById('k-rhythm').textContent   = avgRhythm + '%';
+  document.getElementById('k-rounds').textContent   = n;
+
+  // Trend helper
+  const trend = (key) => {
+    if (n < 2) return '<span style="color:#444466;">— first round</span>';
+    const last = results[n-1][key];
+    const prev = results[n-2][key];
+    const d    = last - prev;
+    if (d === 0) return '<span style="color:#444466;">— no change</span>';
+    return d > 0
+      ? `<span class="trend-up">↑ +${Math.abs(d)} from last round</span>`
+      : `<span class="trend-dn">↓ −${Math.abs(d)} from last round</span>`;
+  };
+
+  document.getElementById('k-best-wpm-t').innerHTML = trend('wpm');
+  document.getElementById('k-avg-acc-t').innerHTML  = trend('accuracy');
+  document.getElementById('k-rhythm-t').innerHTML   = trend('rhythm');
+  document.getElementById('k-rounds-t').innerHTML   = `<span style="color:#666688;">total session rounds</span>`;
+
+  const labels = results.map((_, i) => `Round ${i+1}`);
+
+  /* ── LINE CHART ── */
+  if (wpmChart) wpmChart.destroy();
+  wpmChart = new Chart(document.getElementById('wpm-chart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'WPM',
+          data: results.map(r => r.wpm),
+          borderColor: '#A78BFA',
+          backgroundColor: 'rgba(167,139,250,0.08)',
+          pointBackgroundColor: '#A78BFA',
+          pointRadius: 5,
+          tension: 0.4,
+          fill: true,
+          borderWidth: 2.5,
+          borderDash: [],
+        },
+        {
+          label: 'Accuracy %',
+          data: results.map(r => r.accuracy),
+          borderColor: '#34D399',
+          backgroundColor: 'rgba(52,211,153,0.05)',
+          pointBackgroundColor: '#34D399',
+          pointRadius: 4,
+          tension: 0.4,
+          fill: false,
+          borderWidth: 1.5,
+          borderDash: [5, 3],
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { color: '#444466', font: { size: 11, family: 'Courier New' } },
+          grid:  { color: 'rgba(255,255,255,0.03)' }
+        },
+        y: {
+          ticks: { color: '#444466', font: { size: 11, family: 'Courier New' } },
+          grid:  { color: 'rgba(255,255,255,0.03)' }
+        }
+      }
+    }
+  });
+
+  /* ── DONUT CHART ── */
+  const gt95 = results.filter(r => r.accuracy >= 95).length;
+  const g85  = results.filter(r => r.accuracy >= 85 && r.accuracy < 95).length;
+  const lt85 = results.filter(r => r.accuracy < 85).length;
+
+  if (accChart) accChart.destroy();
+  accChart = new Chart(document.getElementById('acc-chart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['≥95% Excellent', '85–94% Good', '<85% Needs work'],
+      datasets: [{
+        data: [gt95, g85, lt85],
+        backgroundColor: ['#34D399', '#60A5FA', '#F87171'],
+        borderWidth: 0,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  /* ── SCATTER CHART ── */
+  if (scatterChart) scatterChart.destroy();
+  scatterChart = new Chart(document.getElementById('scatter-chart'), {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Rounds',
+        data: results.map(r => ({ x: r.wpm, y: r.accuracy })),
+        backgroundColor: results.map(r =>
+          r.accuracy >= 95 ? '#34D399' :
+          r.accuracy >= 85 ? '#A78BFA' : '#F87171'
+        ),
+        pointRadius: 8,
+        pointHoverRadius: 10,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          title: { display: true, text: 'WPM', color: '#444466', font: { size: 10, family: 'Courier New' } },
+          ticks: { color: '#444466', font: { size: 10 } },
+          grid:  { color: 'rgba(255,255,255,0.03)' }
+        },
+        y: {
+          title: { display: true, text: 'Accuracy %', color: '#444466', font: { size: 10, family: 'Courier New' } },
+          ticks: { color: '#444466', font: { size: 10 } },
+          grid:  { color: 'rgba(255,255,255,0.03)' },
+          min: 0, max: 102
+        }
+      }
+    }
+  });
+
+  /* ── PROGRESS BARS ── */
+  const prows = document.getElementById('prog-rows');
+  prows.innerHTML = results.map((r, i) => `
+    <div class="round-header">Round ${i+1} — ${r.diff} difficulty · ${r.time}s</div>
+    <div class="progress-row">
+      <span class="prog-label">WPM</span>
+      <div class="prog-bar-wrap">
+        <div class="prog-bar" style="width:${Math.min(r.wpm/150*100,100)}%;background:#A78BFA;"></div>
+      </div>
+      <span class="prog-val">${r.wpm}</span>
+    </div>
+    <div class="progress-row">
+      <span class="prog-label">Accuracy</span>
+      <div class="prog-bar-wrap">
+        <div class="prog-bar" style="width:${r.accuracy}%;background:#34D399;"></div>
+      </div>
+      <span class="prog-val">${r.accuracy}%</span>
+    </div>
+    <div class="progress-row">
+      <span class="prog-label">Rhythm</span>
+      <div class="prog-bar-wrap">
+        <div class="prog-bar" style="width:${r.rhythm}%;background:#FBBF24;"></div>
+      </div>
+      <span class="prog-val">${r.rhythm}%</span>
+    </div>
+    ${i < results.length - 1 ? '<hr class="round-divider">' : ''}
+  `).join('');
+
+  /* ── INSIGHTS ── */
+  const bestRound   = results.reduce((a,b) => a.wpm > b.wpm ? a : b);
+  const bestAccRound= results.reduce((a,b) => a.accuracy > b.accuracy ? a : b);
+  const wpmValues   = results.map(r => r.wpm);
+  const wpmMean     = wpmValues.reduce((a,b) => a+b,0) / n;
+  const wpmStd      = Math.sqrt(wpmValues.reduce((a,b) => a + (b-wpmMean)**2, 0) / n);
+  const consistency = Math.max(0, Math.round(100 - (wpmStd / wpmMean) * 100));
+  const arch        = ARCHETYPES.find(a => a.test(bestWPM, avgAcc, avgRhythm));
+  const totalChars  = results.reduce((a,r) => a + sentence.length, 0);
+
+  document.getElementById('insights').innerHTML = `
+    <div class="insight-pill">
+      <div class="insight-lbl">Best round</div>
+      <div class="insight-val">R${results.indexOf(bestRound)+1} · ${bestRound.wpm} WPM</div>
+    </div>
+    <div class="insight-pill">
+      <div class="insight-lbl">Most accurate</div>
+      <div class="insight-val">R${results.indexOf(bestAccRound)+1} · ${bestAccRound.accuracy}%</div>
+    </div>
+    <div class="insight-pill">
+      <div class="insight-lbl">Your archetype</div>
+      <div class="insight-val">${arch.icon} ${arch.name}</div>
+    </div>
+    <div class="insight-pill">
+      <div class="insight-lbl">WPM consistency</div>
+      <div class="insight-val">${consistency}%</div>
+    </div>
+    <div class="insight-pill">
+      <div class="insight-lbl">Avg WPM</div>
+      <div class="insight-val">${avgWPM} WPM</div>
+    </div>
+    <div class="insight-pill">
+      <div class="insight-lbl">Avg rhythm score</div>
+      <div class="insight-val">${avgRhythm}%</div>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════ */
+drawEmptyDNA();
+window.addEventListener('resize', () => {
+  if (!active) drawEmptyDNA();
+});
+</script>
+</body>
+</html>
