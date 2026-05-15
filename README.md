@@ -338,7 +338,7 @@ All data is session-scoped and cleared on page refresh. Keeps the app stateless 
 
 **Built with curiosity and zero npm installs.**
 
-*Kriti Gupta — 2025*
+*Kriti Gupta — 2026*
 
 ⌨️ → 🧬 → 📊
 
