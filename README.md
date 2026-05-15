@@ -308,7 +308,7 @@ All data is session-scoped and cleared on page refresh. Keeps the app stateless 
 
 ### Live Version
 
-[View Live Demo](https://kritigupta.github.io/typing-dna)
+[View Live Demo](https://kriti613.github.io/Typing-DNA/)
 > *(Enable GitHub Pages: Settings → Pages → Deploy from main branch)*
 
 ---
